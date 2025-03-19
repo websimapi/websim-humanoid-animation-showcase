@@ -9,6 +9,11 @@ export const config = {
     // Animation settings
     crossFadeDuration: 0.5,
     
+    // Zoom settings
+    zoomSpeed: 0.5,
+    minZoomDistance: 1,
+    maxZoomDistance: 10,
+    
     // Model URL (using a free humanoid model from Three.js examples)
     modelURL: 'https://threejs.org/examples/models/gltf/Xbot.glb'
     
@@ -16,4 +21,3 @@ export const config = {
     // modelURL: 'https://threejs.org/examples/models/gltf/Soldier.glb'
     // modelURL: 'https://models.babylonjs.com/mixamo/hip_hop_dancing.glb'
 };
-

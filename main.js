@@ -2,7 +2,6 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { config } from './config.js';
-import { gsap } from 'gsap';
 
 // Scene setup
 let scene, camera, renderer, controls, mixer, clock, model;
@@ -207,7 +206,7 @@ function setupCameraControls() {
 }
 
 function setCameraPosition(x, y, z) {
-    gsap.to(camera.position, {
+    window.gsap.to(camera.position, {
         x: x,
         y: y, 
         z: z,
@@ -220,7 +219,7 @@ function setCameraPosition(x, y, z) {
 }
 
 function resetCamera() {
-    gsap.to(camera.position, {
+    window.gsap.to(camera.position, {
         x: config.defaultCameraPosition.x,
         y: config.defaultCameraPosition.y,
         z: config.defaultCameraPosition.z,
@@ -237,7 +236,7 @@ function resetCamera() {
 function zoomIn() {
     const newDistance = controls.getDistance() * 0.8;
     if (newDistance >= config.cameraMinDistance) {
-        gsap.to(camera.position, {
+        window.gsap.to(camera.position, {
             x: camera.position.x * 0.8,
             y: camera.position.y * 0.8,
             z: camera.position.z * 0.8,
@@ -252,7 +251,7 @@ function zoomIn() {
 function zoomOut() {
     const newDistance = controls.getDistance() * 1.2;
     if (newDistance <= config.cameraMaxDistance) {
-        gsap.to(camera.position, {
+        window.gsap.to(camera.position, {
             x: camera.position.x * 1.2,
             y: camera.position.y * 1.2,
             z: camera.position.z * 1.2,

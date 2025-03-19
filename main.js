@@ -7,10 +7,11 @@ import { config } from './config.js';
 let scene, camera, renderer, controls, mixer, clock, model;
 let currentAnimation = null;
 let animations = [];
-let activeAnimations = new Map(); // Map to track active animations
 let cameraTargetPosition = new THREE.Vector3(0, 1, 0);
-let playbackSpeed = config.defaultPlaybackSpeed;
-let animationCategories = {};
+
+// Material mapping
+let bodyPartMaterials = new Map();
+let originalMaterials = new Map();
 
 // Initialize the scene
 function init() {
@@ -119,6 +120,10 @@ function loadModel() {
         config.modelURL,
         function(gltf) {
             model = gltf.scene;
+            
+            // Create a mapping of materials by body part
+            mapMaterialsByBodyPart(model);
+            
             model.traverse(function(node) {
                 if (node.isMesh) {
                     node.castShadow = true;
@@ -142,6 +147,9 @@ function loadModel() {
                 playAnimation(0);
             }
             
+            // Create color controls
+            createColorControls();
+            
             // Remove loading message
             document.getElementById('scene-container').removeChild(loadingElement);
         },
@@ -156,42 +164,178 @@ function loadModel() {
     );
 }
 
+function mapMaterialsByBodyPart(model) {
+    // Store original materials
+    model.traverse((node) => {
+        if (node.isMesh) {
+            // Store original material for reset functionality
+            if (!originalMaterials.has(node.name)) {
+                originalMaterials.set(node.name, node.material.clone());
+            }
+            
+            // Create new material that can be modified
+            node.material = node.material.clone();
+        }
+    });
+    
+    // Create a map of body parts
+    const bodyParts = {};
+    
+    // Initialize body parts
+    for (const part in config.bodyPartMappings) {
+        bodyParts[part] = [];
+    }
+    
+    // Map nodes to body parts
+    model.traverse((node) => {
+        if (node.isMesh) {
+            let assignedToPart = false;
+            
+            // Check which body part this mesh belongs to
+            for (const part in config.bodyPartMappings) {
+                const boneNames = config.bodyPartMappings[part];
+                
+                // Check if the node name contains any of the bone names
+                // or is a child of any of the bones
+                if (nodeMatchesBodyPart(node, boneNames)) {
+                    bodyParts[part].push(node);
+                    assignedToPart = true;
+                    break;
+                }
+            }
+            
+            // If not assigned to any specific part, assign to 'body'
+            if (!assignedToPart) {
+                if (!bodyParts['body']) {
+                    bodyParts['body'] = [];
+                }
+                bodyParts['body'].push(node);
+            }
+        }
+    });
+    
+    // Create and store materials for each body part
+    for (const part in bodyParts) {
+        const meshes = bodyParts[part];
+        if (meshes && meshes.length > 0) {
+            // Create a group material for this body part
+            const material = meshes[0].material.clone();
+            bodyPartMaterials.set(part, material);
+            
+            // Assign the material to all meshes in this part
+            meshes.forEach(mesh => {
+                mesh.material = material;
+            });
+        }
+    }
+    
+    console.log('Body parts mapping:', bodyParts);
+}
+
+function nodeMatchesBodyPart(node, boneNames) {
+    // Check if the node name contains any of the bone names
+    for (const boneName of boneNames) {
+        if (node.name.includes(boneName)) {
+            return true;
+        }
+        
+        // Check parent hierarchy
+        let parent = node.parent;
+        while (parent) {
+            if (parent.name && parent.name.includes(boneName)) {
+                return true;
+            }
+            parent = parent.parent;
+        }
+    }
+    return false;
+}
+
+function createColorControls() {
+    // Create color controls container
+    const controlsContainer = document.getElementById('controls');
+    const colorControls = document.createElement('div');
+    colorControls.id = 'color-controls';
+    
+    // Create color section
+    const colorSection = document.createElement('div');
+    colorSection.className = 'color-section';
+    
+    // Add header
+    const header = document.createElement('h2');
+    header.textContent = 'Color Controls';
+    colorSection.appendChild(header);
+    
+    // Add color pickers for each body part
+    for (const part in config.defaultColors) {
+        const colorPicker = document.createElement('div');
+        colorPicker.className = 'color-picker';
+        
+        const label = document.createElement('label');
+        label.textContent = part.charAt(0).toUpperCase() + part.slice(1);
+        
+        const input = document.createElement('input');
+        input.type = 'color';
+        input.value = config.defaultColors[part];
+        input.dataset.part = part;
+        
+        input.addEventListener('input', (e) => {
+            changeBodyPartColor(e.target.dataset.part, e.target.value);
+        });
+        
+        colorPicker.appendChild(label);
+        colorPicker.appendChild(input);
+        colorSection.appendChild(colorPicker);
+    }
+    
+    // Add reset button
+    const resetBtn = document.createElement('button');
+    resetBtn.textContent = 'Reset Colors';
+    resetBtn.className = 'reset-color-btn';
+    resetBtn.onclick = resetColors;
+    colorSection.appendChild(resetBtn);
+    
+    // Add to color controls
+    colorControls.appendChild(colorSection);
+    
+    // Add to main controls
+    controlsContainer.appendChild(colorControls);
+}
+
+function changeBodyPartColor(part, colorValue) {
+    const color = new THREE.Color(colorValue);
+    
+    if (bodyPartMaterials.has(part)) {
+        const material = bodyPartMaterials.get(part);
+        material.color.set(color);
+    } else {
+        console.warn(`No material found for body part: ${part}`);
+    }
+}
+
+function resetColors() {
+    // Reset to original material colors
+    for (const part in config.defaultColors) {
+        if (bodyPartMaterials.has(part)) {
+            const color = new THREE.Color(config.defaultColors[part]);
+            bodyPartMaterials.get(part).color.set(color);
+        }
+    }
+    
+    // Reset color picker values in UI
+    const colorInputs = document.querySelectorAll('#color-controls input[type="color"]');
+    colorInputs.forEach(input => {
+        input.value = config.defaultColors[input.dataset.part];
+    });
+}
+
 function createAnimationButtons() {
     const buttonContainer = document.getElementById('animation-buttons');
     
-    // Organize animations by categories
-    categorizeAnimations();
-    
-    // Create filter tags
-    const filterContainer = document.createElement('div');
-    filterContainer.className = 'animation-filters';
-    
-    // Add "All" filter
-    const allFilter = document.createElement('div');
-    allFilter.className = 'filter-tag active';
-    allFilter.textContent = 'All';
-    allFilter.dataset.category = 'all';
-    allFilter.onclick = () => filterAnimations('all');
-    filterContainer.appendChild(allFilter);
-    
-    // Add category filters
-    Object.keys(animationCategories).forEach(category => {
-        const filterTag = document.createElement('div');
-        filterTag.className = 'filter-tag';
-        filterTag.textContent = category;
-        filterTag.dataset.category = category;
-        filterTag.onclick = () => filterAnimations(category);
-        filterContainer.appendChild(filterTag);
-    });
-    
-    buttonContainer.appendChild(filterContainer);
-    
-    // Create animation buttons
     animations.forEach((animation, index) => {
         const button = document.createElement('button');
         button.textContent = animation.name;
         button.onclick = () => playAnimation(index);
-        button.dataset.category = getAnimationCategory(animation.name);
         
         // Add data attribute for duration to help with debugging
         button.dataset.duration = animation.duration;
@@ -223,294 +367,8 @@ function createAnimationButtons() {
     };
     buttonContainer.appendChild(debugBtn);
 
-    // Setup animation controls
-    createAnimationControls();
-    
     // Create camera control buttons
     setupCameraControls();
-}
-
-function categorizeAnimations() {
-    // Define categories and keywords
-    const categories = {
-        'Poses': ['pose', 'sad', 'sneak', 'idle'],
-        'Walking': ['walk', 'stride', 'run', 'jog'],
-        'Dancing': ['dance', 'hip', 'hop'],
-        'Actions': ['jump', 'punch', 'kick'],
-        'Emotions': ['sad', 'happy', 'angry', 'laugh']
-    };
-    
-    // Categorize each animation
-    animations.forEach(animation => {
-        const name = animation.name.toLowerCase();
-        
-        for (const [category, keywords] of Object.entries(categories)) {
-            if (keywords.some(keyword => name.includes(keyword))) {
-                if (!animationCategories[category]) {
-                    animationCategories[category] = [];
-                }
-                animationCategories[category].push(animation.name);
-                break;
-            }
-        }
-    });
-    
-    console.log('Animation categories:', animationCategories);
-}
-
-function getAnimationCategory(name) {
-    name = name.toLowerCase();
-    for (const [category, animations] of Object.entries(animationCategories)) {
-        if (animations.some(anim => anim.toLowerCase() === name)) {
-            return category;
-        }
-    }
-    return 'Other';
-}
-
-function filterAnimations(category) {
-    // Update active filter
-    const filters = document.querySelectorAll('.filter-tag');
-    filters.forEach(filter => {
-        if (filter.dataset.category === category) {
-            filter.classList.add('active');
-        } else {
-            filter.classList.remove('active');
-        }
-    });
-    
-    // Show/hide buttons based on category
-    const buttons = document.querySelectorAll('#animation-buttons button');
-    buttons.forEach(button => {
-        if (category === 'all' || button.dataset.category === category) {
-            button.style.display = 'inline-block';
-        } else {
-            button.style.display = 'none';
-        }
-    });
-}
-
-function createAnimationControls() {
-    const controlsContainer = document.createElement('div');
-    controlsContainer.className = 'animation-controls';
-    
-    // Create heading
-    const heading = document.createElement('h2');
-    heading.textContent = 'Animation Controls';
-    controlsContainer.appendChild(heading);
-    
-    // Create playback speed slider
-    const speedContainer = document.createElement('div');
-    speedContainer.className = 'slider-container';
-    
-    const speedLabel = document.createElement('label');
-    speedLabel.textContent = 'Playback Speed:';
-    speedContainer.appendChild(speedLabel);
-    
-    const speedValue = document.createElement('span');
-    speedValue.className = 'value-display';
-    speedValue.textContent = config.defaultPlaybackSpeed.toFixed(1) + 'x';
-    speedLabel.appendChild(speedValue);
-    
-    const speedSlider = document.createElement('input');
-    speedSlider.type = 'range';
-    speedSlider.min = config.minPlaybackSpeed;
-    speedSlider.max = config.maxPlaybackSpeed;
-    speedSlider.step = 0.1;
-    speedSlider.value = config.defaultPlaybackSpeed;
-    
-    speedSlider.oninput = function() {
-        playbackSpeed = parseFloat(this.value);
-        speedValue.textContent = playbackSpeed.toFixed(1) + 'x';
-        
-        // Update all active animations
-        if (mixer) {
-            activeAnimations.forEach(action => {
-                action.setEffectiveTimeScale(playbackSpeed);
-            });
-        }
-    };
-    
-    speedContainer.appendChild(speedSlider);
-    controlsContainer.appendChild(speedContainer);
-    
-    // Animation blending controls
-    const blendContainer = document.createElement('div');
-    blendContainer.className = 'blend-animations';
-    
-    const blendHeading = document.createElement('h3');
-    blendHeading.textContent = 'Blend Animations';
-    blendContainer.appendChild(blendHeading);
-    
-    // Primary animation select
-    const primaryGroup = document.createElement('div');
-    primaryGroup.className = 'animation-group';
-    
-    const primaryLabel = document.createElement('label');
-    primaryLabel.textContent = 'Primary Animation:';
-    primaryGroup.appendChild(primaryLabel);
-    
-    const primarySelect = document.createElement('select');
-    primarySelect.className = 'animation-select';
-    animations.forEach((animation, index) => {
-        const option = document.createElement('option');
-        option.value = index;
-        option.textContent = animation.name;
-        primarySelect.appendChild(option);
-    });
-    primaryGroup.appendChild(primarySelect);
-    
-    // Secondary animation select
-    const secondaryGroup = document.createElement('div');
-    secondaryGroup.className = 'animation-group';
-    
-    const secondaryLabel = document.createElement('label');
-    secondaryLabel.textContent = 'Secondary Animation:';
-    secondaryGroup.appendChild(secondaryLabel);
-    
-    const secondarySelect = document.createElement('select');
-    secondarySelect.className = 'animation-select';
-    animations.forEach((animation, index) => {
-        const option = document.createElement('option');
-        option.value = index;
-        option.textContent = animation.name;
-        if (index === 1 && animations.length > 1) {
-            option.selected = true;
-        }
-        secondarySelect.appendChild(option);
-    });
-    secondaryGroup.appendChild(secondarySelect);
-    
-    // Blend weight slider
-    const weightContainer = document.createElement('div');
-    weightContainer.className = 'slider-container';
-    
-    const weightLabel = document.createElement('label');
-    weightLabel.textContent = 'Blend Weight:';
-    weightContainer.appendChild(weightLabel);
-    
-    const weightValue = document.createElement('span');
-    weightValue.className = 'value-display';
-    weightValue.textContent = '0.5';
-    weightLabel.appendChild(weightValue);
-    
-    const weightSlider = document.createElement('input');
-    weightSlider.type = 'range';
-    weightSlider.min = 0;
-    weightSlider.max = 1;
-    weightSlider.step = 0.05;
-    weightSlider.value = 0.5;
-    
-    weightSlider.oninput = function() {
-        weightValue.textContent = this.value;
-    };
-    
-    weightContainer.appendChild(weightSlider);
-    
-    // Blend button
-    const blendButton = document.createElement('button');
-    blendButton.textContent = 'Blend Animations';
-    blendButton.className = 'mix-button';
-    blendButton.onclick = function() {
-        const primaryIndex = parseInt(primarySelect.value);
-        const secondaryIndex = parseInt(secondarySelect.value);
-        const weight = parseFloat(weightSlider.value);
-        blendAnimations(primaryIndex, secondaryIndex, weight);
-    };
-    
-    blendContainer.appendChild(primaryGroup);
-    blendContainer.appendChild(secondaryGroup);
-    blendContainer.appendChild(weightContainer);
-    blendContainer.appendChild(blendButton);
-    
-    controlsContainer.appendChild(blendContainer);
-    
-    // Add controls to document
-    document.getElementById('controls').appendChild(controlsContainer);
-}
-
-function blendAnimations(primaryIndex, secondaryIndex, weight) {
-    if (mixer) {
-        // Stop current animation if any
-        if (currentAnimation) {
-            currentAnimation.fadeOut(config.crossFadeDuration);
-        }
-        
-        // Clear active animations map
-        activeAnimations.clear();
-        
-        // Play primary animation
-        const primaryAction = mixer.clipAction(animations[primaryIndex]);
-        primaryAction.reset().setEffectiveWeight(1 - weight).fadeIn(config.crossFadeDuration).play();
-        primaryAction.setEffectiveTimeScale(playbackSpeed);
-        activeAnimations.set(primaryIndex, primaryAction);
-        
-        // Play secondary animation
-        const secondaryAction = mixer.clipAction(animations[secondaryIndex]);
-        secondaryAction.reset().setEffectiveWeight(weight).fadeIn(config.crossFadeDuration).play();
-        secondaryAction.setEffectiveTimeScale(playbackSpeed);
-        activeAnimations.set(secondaryIndex, secondaryAction);
-        
-        // Update UI to show blended animations
-        document.getElementById('current-animation').textContent = 
-            `${animations[primaryIndex].name} (${(1-weight).toFixed(2)}) + ${animations[secondaryIndex].name} (${weight.toFixed(2)})`;
-        
-        // Update active button
-        const buttons = document.querySelectorAll('#animation-buttons button');
-        buttons.forEach(btn => btn.classList.remove('active'));
-    }
-}
-
-function playAnimation(index) {
-    if (mixer) {
-        // Debug information
-        console.log(`Playing animation: ${animations[index].name}, Duration: ${animations[index].duration}`);
-        
-        // Stop current animation
-        if (currentAnimation) {
-            currentAnimation.fadeOut(config.crossFadeDuration);
-        }
-        
-        // Clear active animations map
-        activeAnimations.clear();
-        
-        // Play new animation
-        currentAnimation = mixer.clipAction(animations[index]);
-        currentAnimation.reset().fadeIn(config.crossFadeDuration).play();
-        currentAnimation.setEffectiveTimeScale(playbackSpeed);
-        
-        // Add to active animations
-        activeAnimations.set(index, currentAnimation);
-        
-        // Handle pose-type animations (very short or zero duration)
-        if (animations[index].duration < 0.5) {
-            console.log(`Detected pose animation: ${animations[index].name}`);
-            currentAnimation.clampWhenFinished = true;
-            currentAnimation.setLoop(THREE.LoopOnce, 1);
-            
-            // For zero-duration animations, force them to "stick"
-            if (animations[index].duration === 0) {
-                currentAnimation.setEffectiveTimeScale(0);
-            }
-        } else {
-            // Regular looping animation
-            currentAnimation.setLoop(THREE.LoopRepeat);
-            currentAnimation.setEffectiveTimeScale(playbackSpeed);
-        }
-        
-        // Update UI
-        document.getElementById('current-animation').textContent = animations[index].name;
-        
-        // Update active button
-        const buttons = document.querySelectorAll('#animation-buttons button');
-        buttons.forEach((btn, i) => {
-            if (i === index) {
-                btn.classList.add('active');
-            } else {
-                btn.classList.remove('active');
-            }
-        });
-    }
 }
 
 function setupCameraControls() {
@@ -607,6 +465,51 @@ function zoomOut() {
             duration: 0.5,
             onUpdate: function() {
                 controls.update();
+            }
+        });
+    }
+}
+
+function playAnimation(index) {
+    if (mixer) {
+        // Debug information
+        console.log(`Playing animation: ${animations[index].name}, Duration: ${animations[index].duration}`);
+        
+        // Stop current animation
+        if (currentAnimation) {
+            currentAnimation.fadeOut(config.crossFadeDuration);
+        }
+        
+        // Play new animation
+        currentAnimation = mixer.clipAction(animations[index]);
+        currentAnimation.reset().fadeIn(config.crossFadeDuration).play();
+        
+        // Handle pose-type animations (very short or zero duration)
+        if (animations[index].duration < 0.5) {
+            console.log(`Detected pose animation: ${animations[index].name}`);
+            currentAnimation.clampWhenFinished = true;
+            currentAnimation.setLoop(THREE.LoopOnce, 1);
+            
+            // For zero-duration animations, force them to "stick"
+            if (animations[index].duration === 0) {
+                currentAnimation.setEffectiveTimeScale(0);
+            }
+        } else {
+            // Regular looping animation
+            currentAnimation.setLoop(THREE.LoopRepeat);
+            currentAnimation.setEffectiveTimeScale(1);
+        }
+        
+        // Update UI
+        document.getElementById('current-animation').textContent = animations[index].name;
+        
+        // Update active button
+        const buttons = document.querySelectorAll('#animation-buttons button');
+        buttons.forEach((btn, i) => {
+            if (i === index) {
+                btn.classList.add('active');
+            } else {
+                btn.classList.remove('active');
             }
         });
     }

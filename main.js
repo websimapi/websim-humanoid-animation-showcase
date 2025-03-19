@@ -44,7 +44,6 @@ function init() {
     controls.maxDistance = config.cameraMaxDistance;
     controls.enablePan = true;
     controls.screenSpacePanning = true;
-    controls.zoomSpeed = 0.5; 
     controls.update();
 
     // Lighting
@@ -160,6 +159,12 @@ function createAnimationButtons() {
         button.onclick = () => playAnimation(index);
         buttonContainer.appendChild(button);
     });
+
+    // Add custom sad pose button
+    const sadButton = document.createElement('button');
+    sadButton.textContent = "Sad Pose";
+    sadButton.onclick = () => playSadPose();
+    buttonContainer.appendChild(sadButton);
 
     // Create camera control buttons
     setupCameraControls();
@@ -282,6 +287,87 @@ function playAnimation(index) {
         const buttons = document.querySelectorAll('#animation-buttons button');
         buttons.forEach((btn, i) => {
             if (i === index) {
+                btn.classList.add('active');
+            } else {
+                btn.classList.remove('active');
+            }
+        });
+    }
+}
+
+function playSadPose() {
+    if (mixer && model) {
+        // Stop current animation with fadeout
+        if (currentAnimation) {
+            currentAnimation.fadeOut(config.crossFadeDuration);
+        }
+        
+        // Reset any existing pose
+        if (model) {
+            model.traverse((node) => {
+                if (node.isBone) {
+                    node.rotation.set(0, 0, 0);
+                }
+            });
+        }
+        
+        // Find and modify bones for sad pose
+        let spine = null;
+        let head = null;
+        let leftArm = null;
+        let rightArm = null;
+        
+        model.traverse((node) => {
+            if (node.isBone) {
+                const name = node.name.toLowerCase();
+                if (name.includes('spine') && !name.includes('spine1') && !name.includes('spine2')) {
+                    spine = node;
+                } else if (name.includes('head')) {
+                    head = node;
+                } else if (name.includes('leftshoulder') || name.includes('leftarm')) {
+                    leftArm = node;
+                } else if (name.includes('rightshoulder') || name.includes('rightarm')) {
+                    rightArm = node;
+                }
+            }
+        });
+        
+        // Apply sad pose using GSAP
+        if (head) {
+            window.gsap.to(head.rotation, {
+                x: 0.3, // Head down
+                duration: config.crossFadeDuration
+            });
+        }
+        
+        if (spine) {
+            window.gsap.to(spine.rotation, {
+                x: 0.2, // Slight slouch
+                duration: config.crossFadeDuration
+            });
+        }
+        
+        if (leftArm) {
+            window.gsap.to(leftArm.rotation, {
+                z: -0.2, // Arms drooping
+                duration: config.crossFadeDuration
+            });
+        }
+        
+        if (rightArm) {
+            window.gsap.to(rightArm.rotation, {
+                z: 0.2, // Arms drooping
+                duration: config.crossFadeDuration
+            });
+        }
+        
+        // Update UI
+        document.getElementById('current-animation').textContent = "Sad Pose";
+        
+        // Update active button status
+        const buttons = document.querySelectorAll('#animation-buttons button');
+        buttons.forEach((btn) => {
+            if (btn.textContent === "Sad Pose") {
                 btn.classList.add('active');
             } else {
                 btn.classList.remove('active');

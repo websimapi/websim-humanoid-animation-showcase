@@ -12,6 +12,7 @@ let cameraTargetPosition = new THREE.Vector3(0, 1, 0);
 // Material mapping
 let bodyPartMaterials = new Map();
 let originalMaterials = new Map();
+let selectedBodyPart = null;  // Track which body part is selected
 
 // Initialize the scene
 function init() {
@@ -279,8 +280,21 @@ function createColorControls() {
         input.value = config.defaultColors[part];
         input.dataset.part = part;
         
+        // Focus/click handler for highlighting body part
+        label.addEventListener('click', (e) => {
+            selectBodyPart(part);
+        });
+        
+        input.addEventListener('focus', (e) => {
+            selectBodyPart(e.target.dataset.part);
+        });
+        
         input.addEventListener('input', (e) => {
             changeBodyPartColor(e.target.dataset.part, e.target.value);
+        });
+        
+        input.addEventListener('blur', (e) => {
+            clearBodyPartSelection();
         });
         
         colorPicker.appendChild(label);
@@ -300,6 +314,50 @@ function createColorControls() {
     
     // Add to main controls
     controlsContainer.appendChild(colorControls);
+}
+
+function selectBodyPart(part) {
+    // Clear previous selection
+    clearBodyPartSelection();
+    
+    // Store current selection
+    selectedBodyPart = part;
+    
+    // Highlight color picker in UI
+    const picker = document.querySelector(`.color-picker input[data-part="${part}"]`).parentElement;
+    picker.classList.add('active-picker');
+    
+    // Highlight the selected body part in the model
+    if (bodyPartMaterials.has(part)) {
+        const material = bodyPartMaterials.get(part);
+        
+        // Store original properties
+        material.userData = material.userData || {};
+        material.userData.originalEmissive = material.userData.originalEmissive || material.emissive.clone();
+        material.userData.originalEmissiveIntensity = material.userData.originalEmissiveIntensity || material.emissiveIntensity;
+        
+        // Add highlight effect
+        material.emissive.set(0x666666);
+        material.emissiveIntensity = 0.5;
+    }
+}
+
+function clearBodyPartSelection() {
+    if (selectedBodyPart && bodyPartMaterials.has(selectedBodyPart)) {
+        const material = bodyPartMaterials.get(selectedBodyPart);
+        
+        // Restore original properties
+        if (material.userData && material.userData.originalEmissive) {
+            material.emissive.copy(material.userData.originalEmissive);
+            material.emissiveIntensity = material.userData.originalEmissiveIntensity;
+        }
+        
+        // Remove UI highlight
+        const picker = document.querySelector(`.color-picker input[data-part="${selectedBodyPart}"]`).parentElement;
+        picker.classList.remove('active-picker');
+        
+        selectedBodyPart = null;
+    }
 }
 
 function changeBodyPartColor(part, colorValue) {

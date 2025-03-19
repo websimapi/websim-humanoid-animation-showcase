@@ -31,7 +31,7 @@ body {
     padding: 15px;
     border-radius: 8px;
     z-index: 100;
-    max-width: 400px;
+    max-width: 500px;
 }
 
 h1 {
@@ -73,3 +73,31 @@ button.active {
     color: #f1c40f;
 }
 
+#camera-controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 15px;
+    padding-top: 15px;
+    border-top: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.zoom-btn {
+    font-size: 1.2rem;
+    padding: 5px 12px;
+    background-color: #9b59b6;
+}
+
+.zoom-btn:hover {
+    background-color: #8e44ad;
+}
+
+.camera-section {
+    margin-top: 15px;
+}
+
+.camera-section h2 {
+    font-size: 1.1rem;
+    margin-bottom: 10px;
+    color: #3498db;
+}

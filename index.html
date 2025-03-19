@@ -12,6 +12,7 @@
             }
         }
     </script>
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.2/dist/gsap.min.js"></script>
 </head>
 <body>
     <div id="container">
@@ -19,6 +20,11 @@
         <div id="controls">
             <h1>Humanoid Animation Showcase</h1>
             <div id="animation-buttons"></div>
+            <div class="camera-section">
+                <h2>Camera Controls</h2>
+                <div id="camera-controls"></div>
+                <p class="control-tip">Drag to rotate, scroll to zoom, right-click to pan</p>
+            </div>
             <div id="info">
                 <p>Current Animation: <span id="current-animation">None</span></p>
                 <p>Click on buttons to change animations</p>

@@ -2,15 +2,15 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { config } from './config.js';
+import { gsap } from 'gsap';
 
 // Scene setup
 let scene, camera, renderer, controls, mixer, clock, model;
 let currentAnimation = null;
 let animations = [];
+let cameraTargetPosition = new THREE.Vector3(0, 1, 0);
 
 // Initialize the scene
-init();
-
 function init() {
     // Create scene
     scene = new THREE.Scene();
@@ -23,7 +23,11 @@ function init() {
         0.1,
         1000
     );
-    camera.position.set(0, 1.5, 3);
+    camera.position.set(
+        config.defaultCameraPosition.x,
+        config.defaultCameraPosition.y,
+        config.defaultCameraPosition.z
+    );
 
     // Setup renderer
     renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -32,15 +36,15 @@ function init() {
     renderer.shadowMap.enabled = true;
     document.getElementById('scene-container').appendChild(renderer.domElement);
 
-    // Add orbit controls
+    // Add orbit controls with enhanced settings
     controls = new OrbitControls(camera, renderer.domElement);
-    controls.target.set(0, 1, 0);
-    controls.minDistance = 1;    // Set minimum zoom distance
-    controls.maxDistance = 10;   // Set maximum zoom distance
-    controls.enableZoom = true;  // Ensure zoom is enabled
-    controls.zoomSpeed = 0.5;    // Set a slower zoom speed for more granular control
-    controls.dampingFactor = 0.1; // Add damping for smoother camera movement
-    controls.enableDamping = true; // Enable damping (inertia)
+    controls.target.copy(cameraTargetPosition);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.05;
+    controls.minDistance = config.cameraMinDistance;
+    controls.maxDistance = config.cameraMaxDistance;
+    controls.enablePan = true;
+    controls.screenSpacePanning = true;
     controls.update();
 
     // Lighting
@@ -156,6 +160,108 @@ function createAnimationButtons() {
         button.onclick = () => playAnimation(index);
         buttonContainer.appendChild(button);
     });
+
+    // Create camera control buttons
+    setupCameraControls();
+}
+
+function setupCameraControls() {
+    const cameraControls = document.getElementById('camera-controls');
+    
+    // Reset camera button
+    const resetBtn = document.createElement('button');
+    resetBtn.textContent = 'Reset Camera';
+    resetBtn.onclick = resetCamera;
+    cameraControls.appendChild(resetBtn);
+
+    // Front view
+    const frontBtn = document.createElement('button');
+    frontBtn.textContent = 'Front View';
+    frontBtn.onclick = () => setCameraPosition(0, 1.5, 3);
+    cameraControls.appendChild(frontBtn);
+
+    // Side view
+    const sideBtn = document.createElement('button');
+    sideBtn.textContent = 'Side View';
+    sideBtn.onclick = () => setCameraPosition(3, 1.5, 0);
+    cameraControls.appendChild(sideBtn);
+
+    // Top view
+    const topBtn = document.createElement('button');
+    topBtn.textContent = 'Top View';
+    topBtn.onclick = () => setCameraPosition(0, 4, 0.1);
+    cameraControls.appendChild(topBtn);
+
+    // Create zoom controls
+    const zoomInBtn = document.createElement('button');
+    zoomInBtn.textContent = '🔍+';
+    zoomInBtn.onclick = zoomIn;
+    zoomInBtn.className = 'zoom-btn';
+    cameraControls.appendChild(zoomInBtn);
+
+    const zoomOutBtn = document.createElement('button');
+    zoomOutBtn.textContent = '🔍-';
+    zoomOutBtn.onclick = zoomOut;
+    zoomOutBtn.className = 'zoom-btn';
+    cameraControls.appendChild(zoomOutBtn);
+}
+
+function setCameraPosition(x, y, z) {
+    gsap.to(camera.position, {
+        x: x,
+        y: y, 
+        z: z,
+        duration: 1,
+        onUpdate: function() {
+            camera.lookAt(cameraTargetPosition);
+            controls.update();
+        }
+    });
+}
+
+function resetCamera() {
+    gsap.to(camera.position, {
+        x: config.defaultCameraPosition.x,
+        y: config.defaultCameraPosition.y,
+        z: config.defaultCameraPosition.z,
+        duration: 1,
+        onUpdate: function() {
+            camera.lookAt(cameraTargetPosition);
+            controls.update();
+        }
+    });
+    controls.target.copy(cameraTargetPosition);
+    controls.update();
+}
+
+function zoomIn() {
+    const newDistance = controls.getDistance() * 0.8;
+    if (newDistance >= config.cameraMinDistance) {
+        gsap.to(camera.position, {
+            x: camera.position.x * 0.8,
+            y: camera.position.y * 0.8,
+            z: camera.position.z * 0.8,
+            duration: 0.5,
+            onUpdate: function() {
+                controls.update();
+            }
+        });
+    }
+}
+
+function zoomOut() {
+    const newDistance = controls.getDistance() * 1.2;
+    if (newDistance <= config.cameraMaxDistance) {
+        gsap.to(camera.position, {
+            x: camera.position.x * 1.2,
+            y: camera.position.y * 1.2,
+            z: camera.position.z * 1.2,
+            duration: 0.5,
+            onUpdate: function() {
+                controls.update();
+            }
+        });
+    }
 }
 
 function playAnimation(index) {
@@ -199,9 +305,11 @@ function animate() {
         mixer.update(delta);
     }
     
-    // Update controls (important for damping)
+    // Update controls with damping effect
     controls.update();
     
     // Render scene
     renderer.render(scene, camera);
 }
+
+init();

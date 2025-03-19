@@ -5,14 +5,12 @@ export const config = {
     
     // Camera settings
     cameraFOV: 50,
+    cameraMinDistance: 1,
+    cameraMaxDistance: 10,
+    defaultCameraPosition: { x: 0, y: 1.5, z: 3 },
     
     // Animation settings
     crossFadeDuration: 0.5,
-    
-    // Zoom settings
-    zoomSpeed: 0.5,
-    minZoomDistance: 1,
-    maxZoomDistance: 10,
     
     // Model URL (using a free humanoid model from Three.js examples)
     modelURL: 'https://threejs.org/examples/models/gltf/Xbot.glb'

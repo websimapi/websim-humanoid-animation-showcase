@@ -44,6 +44,11 @@ function init() {
     controls.maxDistance = config.cameraMaxDistance;
     controls.enablePan = true;
     controls.screenSpacePanning = true;
+    controls.mouseButtons = {
+        LEFT: THREE.MOUSE.ROTATE,
+        MIDDLE: THREE.MOUSE.PAN,
+        RIGHT: THREE.MOUSE.PAN
+    };
     controls.update();
 
     // Lighting

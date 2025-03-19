@@ -109,3 +109,10 @@ button[data-duration="0.4"] {
     margin-bottom: 10px;
     color: #3498db;
 }
+
+.control-tip {
+    margin-top: 8px;
+    font-size: 0.8rem;
+    color: #bbb;
+    font-style: italic;
+}

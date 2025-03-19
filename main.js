@@ -38,9 +38,7 @@ function init() {
     controls.minDistance = 1;    // Set minimum zoom distance
     controls.maxDistance = 10;   // Set maximum zoom distance
     controls.enableZoom = true;  // Ensure zoom is enabled
-    controls.zoomSpeed = 0.5;    // Reduced zoom speed for smoother zooming
-    controls.enableDamping = true; // Enable damping (inertia) for smoother control
-    controls.dampingFactor = 0.05; // Lower values make movement more gradual
+    controls.zoomSpeed = 0.5;    // Reduce zoom speed for smoother zooming
     controls.update();
 
     // Lighting
@@ -199,7 +197,7 @@ function animate() {
         mixer.update(delta);
     }
     
-    // Update controls (damping requires update in animation loop)
+    // Update controls
     controls.update();
     
     // Render scene

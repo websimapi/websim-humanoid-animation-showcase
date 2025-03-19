@@ -2,6 +2,14 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { config } from './config.js';
+import { 
+    mapMaterialsByBodyPart, 
+    selectBodyPart, 
+    clearBodyPartSelection, 
+    changeBodyPartColor, 
+    resetColors,
+    createColorControls 
+} from './utilities.js';
 
 // Scene setup
 let scene, camera, renderer, controls, mixer, clock, model;
@@ -122,8 +130,8 @@ function loadModel() {
         function(gltf) {
             model = gltf.scene;
             
-            // Create a mapping of materials by body part
-            mapMaterialsByBodyPart(model);
+            // Create a mapping of materials by body part using the utility function
+            mapMaterialsByBodyPart(model, config, originalMaterials, bodyPartMaterials);
             
             model.traverse(function(node) {
                 if (node.isMesh) {
@@ -148,8 +156,8 @@ function loadModel() {
                 playAnimation(0);
             }
             
-            // Create color controls
-            createColorControls();
+            // Create color controls using the utility function
+            selectedBodyPart = createColorControls(config, bodyPartMaterials, selectedBodyPart);
             
             // Remove loading message
             document.getElementById('scene-container').removeChild(loadingElement);
@@ -163,228 +171,6 @@ function loadModel() {
             loadingElement.textContent = 'Error loading model';
         }
     );
-}
-
-function mapMaterialsByBodyPart(model) {
-    // Store original materials
-    model.traverse((node) => {
-        if (node.isMesh) {
-            // Store original material for reset functionality
-            if (!originalMaterials.has(node.name)) {
-                originalMaterials.set(node.name, node.material.clone());
-            }
-            
-            // Create new material that can be modified
-            node.material = node.material.clone();
-        }
-    });
-    
-    // Create a map of body parts
-    const bodyParts = {};
-    
-    // Initialize body parts
-    for (const part in config.bodyPartMappings) {
-        bodyParts[part] = [];
-    }
-    
-    // Map nodes to body parts
-    model.traverse((node) => {
-        if (node.isMesh) {
-            let assignedToPart = false;
-            
-            // Check which body part this mesh belongs to
-            for (const part in config.bodyPartMappings) {
-                const boneNames = config.bodyPartMappings[part];
-                
-                // Check if the node name contains any of the bone names
-                // or is a child of any of the bones
-                if (nodeMatchesBodyPart(node, boneNames)) {
-                    bodyParts[part].push(node);
-                    assignedToPart = true;
-                    break;
-                }
-            }
-            
-            // If not assigned to any specific part, assign to 'body'
-            if (!assignedToPart) {
-                if (!bodyParts['body']) {
-                    bodyParts['body'] = [];
-                }
-                bodyParts['body'].push(node);
-            }
-        }
-    });
-    
-    // Create and store materials for each body part
-    for (const part in bodyParts) {
-        const meshes = bodyParts[part];
-        if (meshes && meshes.length > 0) {
-            // Create a group material for this body part
-            const material = meshes[0].material.clone();
-            bodyPartMaterials.set(part, material);
-            
-            // Assign the material to all meshes in this part
-            meshes.forEach(mesh => {
-                mesh.material = material;
-            });
-        }
-    }
-    
-    console.log('Body parts mapping:', bodyParts);
-}
-
-function nodeMatchesBodyPart(node, boneNames) {
-    // Check if the node name contains any of the bone names
-    for (const boneName of boneNames) {
-        if (node.name.includes(boneName)) {
-            return true;
-        }
-        
-        // Check parent hierarchy
-        let parent = node.parent;
-        while (parent) {
-            if (parent.name && parent.name.includes(boneName)) {
-                return true;
-            }
-            parent = parent.parent;
-        }
-    }
-    return false;
-}
-
-function createColorControls() {
-    // Create color controls container
-    const controlsContainer = document.getElementById('controls');
-    const colorControls = document.createElement('div');
-    colorControls.id = 'color-controls';
-    
-    // Create color section
-    const colorSection = document.createElement('div');
-    colorSection.className = 'color-section';
-    
-    // Add header
-    const header = document.createElement('h2');
-    header.textContent = 'Color Controls';
-    colorSection.appendChild(header);
-    
-    // Add color pickers for each body part
-    for (const part in config.defaultColors) {
-        const colorPicker = document.createElement('div');
-        colorPicker.className = 'color-picker';
-        
-        const label = document.createElement('label');
-        label.textContent = part.charAt(0).toUpperCase() + part.slice(1);
-        
-        const input = document.createElement('input');
-        input.type = 'color';
-        input.value = config.defaultColors[part];
-        input.dataset.part = part;
-        
-        // Focus/click handler for highlighting body part
-        label.addEventListener('click', (e) => {
-            selectBodyPart(part);
-        });
-        
-        input.addEventListener('focus', (e) => {
-            selectBodyPart(e.target.dataset.part);
-        });
-        
-        input.addEventListener('input', (e) => {
-            changeBodyPartColor(e.target.dataset.part, e.target.value);
-        });
-        
-        input.addEventListener('blur', (e) => {
-            clearBodyPartSelection();
-        });
-        
-        colorPicker.appendChild(label);
-        colorPicker.appendChild(input);
-        colorSection.appendChild(colorPicker);
-    }
-    
-    // Add reset button
-    const resetBtn = document.createElement('button');
-    resetBtn.textContent = 'Reset Colors';
-    resetBtn.className = 'reset-color-btn';
-    resetBtn.onclick = resetColors;
-    colorSection.appendChild(resetBtn);
-    
-    // Add to color controls
-    colorControls.appendChild(colorSection);
-    
-    // Add to main controls
-    controlsContainer.appendChild(colorControls);
-}
-
-function selectBodyPart(part) {
-    // Clear previous selection
-    clearBodyPartSelection();
-    
-    // Store current selection
-    selectedBodyPart = part;
-    
-    // Highlight color picker in UI
-    const picker = document.querySelector(`.color-picker input[data-part="${part}"]`).parentElement;
-    picker.classList.add('active-picker');
-    
-    // Highlight the selected body part in the model
-    if (bodyPartMaterials.has(part)) {
-        const material = bodyPartMaterials.get(part);
-        
-        // Store original properties
-        material.userData = material.userData || {};
-        material.userData.originalEmissive = material.userData.originalEmissive || material.emissive.clone();
-        material.userData.originalEmissiveIntensity = material.userData.originalEmissiveIntensity || material.emissiveIntensity;
-        
-        // Add highlight effect
-        material.emissive.set(0x666666);
-        material.emissiveIntensity = 0.5;
-    }
-}
-
-function clearBodyPartSelection() {
-    if (selectedBodyPart && bodyPartMaterials.has(selectedBodyPart)) {
-        const material = bodyPartMaterials.get(selectedBodyPart);
-        
-        // Restore original properties
-        if (material.userData && material.userData.originalEmissive) {
-            material.emissive.copy(material.userData.originalEmissive);
-            material.emissiveIntensity = material.userData.originalEmissiveIntensity;
-        }
-        
-        // Remove UI highlight
-        const picker = document.querySelector(`.color-picker input[data-part="${selectedBodyPart}"]`).parentElement;
-        picker.classList.remove('active-picker');
-        
-        selectedBodyPart = null;
-    }
-}
-
-function changeBodyPartColor(part, colorValue) {
-    const color = new THREE.Color(colorValue);
-    
-    if (bodyPartMaterials.has(part)) {
-        const material = bodyPartMaterials.get(part);
-        material.color.set(color);
-    } else {
-        console.warn(`No material found for body part: ${part}`);
-    }
-}
-
-function resetColors() {
-    // Reset to original material colors
-    for (const part in config.defaultColors) {
-        if (bodyPartMaterials.has(part)) {
-            const color = new THREE.Color(config.defaultColors[part]);
-            bodyPartMaterials.get(part).color.set(color);
-        }
-    }
-    
-    // Reset color picker values in UI
-    const colorInputs = document.querySelectorAll('#color-controls input[type="color"]');
-    colorInputs.forEach(input => {
-        input.value = config.defaultColors[input.dataset.part];
-    });
 }
 
 function createAnimationButtons() {

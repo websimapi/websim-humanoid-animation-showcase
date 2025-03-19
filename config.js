@@ -27,12 +27,13 @@ export const config = {
     
     // Body part mapping (these will be specific to the model)
     bodyPartMappings: {
-        head: ['mixamorigHead'],
-        upperBody: ['mixamorigSpine', 'mixamorigSpine1', 'mixamorigSpine2', 'mixamorigNeck'],
-        lowerBody: ['mixamorigHips'],
+        head: ['mixamorigHead', 'head', 'face', 'Hair', 'Eyebrows', 'Eyes'],
+        upperBody: ['mixamorigSpine', 'mixamorigSpine1', 'mixamorigSpine2', 'mixamorigNeck', 'torso', 'chest'],
+        lowerBody: ['mixamorigHips', 'pelvis', 'waist'],
         arms: ['mixamorigLeftArm', 'mixamorigRightArm', 'mixamorigLeftForeArm', 'mixamorigRightForeArm', 
-               'mixamorigLeftHand', 'mixamorigRightHand', 'mixamorigLeftShoulder', 'mixamorigRightShoulder'],
+               'mixamorigLeftHand', 'mixamorigRightHand', 'mixamorigLeftShoulder', 'mixamorigRightShoulder',
+               'shoulder', 'arm', 'hand', 'sleeve'],
         legs: ['mixamorigLeftUpLeg', 'mixamorigRightUpLeg', 'mixamorigLeftLeg', 'mixamorigRightLeg', 
-               'mixamorigLeftFoot', 'mixamorigRightFoot']
+               'mixamorigLeftFoot', 'mixamorigRightFoot', 'leg', 'foot', 'thigh', 'shin', 'calf']
     }
 };

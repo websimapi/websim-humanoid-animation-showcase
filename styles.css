@@ -130,15 +130,21 @@ button[data-duration="0.4"] {
     display: flex;
     align-items: center;
     margin-bottom: 8px;
-    padding: 5px;
+    padding: 10px;
     border-radius: 4px;
     transition: background-color 0.3s;
     cursor: pointer;
+    border: 2px solid transparent;
 }
 
 .color-picker.active-picker {
     background-color: rgba(52, 152, 219, 0.3);
-    box-shadow: 0 0 5px rgba(52, 152, 219, 0.5);
+    box-shadow: 0 0 8px rgba(52, 152, 219, 0.7);
+    border: 2px solid #3498db;
+}
+
+.color-picker:hover {
+    background-color: rgba(52, 152, 219, 0.1);
 }
 
 .color-picker label {

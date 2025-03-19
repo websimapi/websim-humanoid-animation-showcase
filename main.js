@@ -44,6 +44,7 @@ function init() {
     controls.maxDistance = config.cameraMaxDistance;
     controls.enablePan = true;
     controls.screenSpacePanning = true;
+    controls.zoomSpeed = 0.5; 
     controls.update();
 
     // Lighting

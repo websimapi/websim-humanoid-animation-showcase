@@ -35,6 +35,10 @@ function init() {
     // Add orbit controls
     controls = new OrbitControls(camera, renderer.domElement);
     controls.target.set(0, 1, 0);
+    controls.minDistance = 1;    // Set minimum zoom distance
+    controls.maxDistance = 10;   // Set maximum zoom distance
+    controls.enableZoom = true;  // Ensure zoom is enabled
+    controls.zoomSpeed = 1.0;    // Set zoom speed
     controls.update();
 
     // Lighting
@@ -199,4 +203,3 @@ function animate() {
     // Render scene
     renderer.render(scene, camera);
 }
-

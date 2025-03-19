@@ -110,9 +110,91 @@ button[data-duration="0.4"] {
     color: #3498db;
 }
 
-.control-tip {
-    margin-top: 8px;
+.animation-controls {
+    margin-top: 15px;
+    padding-top: 15px;
+    border-top: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.animation-controls h2 {
+    font-size: 1.1rem;
+    margin-bottom: 10px;
+    color: #3498db;
+}
+
+.slider-container {
+    margin: 10px 0;
+}
+
+.slider-container label {
+    display: block;
+    margin-bottom: 5px;
+    font-size: 0.9rem;
+}
+
+input[type="range"] {
+    width: 100%;
+    margin: 5px 0;
+}
+
+.value-display {
     font-size: 0.8rem;
-    color: #bbb;
-    font-style: italic;
+    color: #f1c40f;
+    margin-left: 5px;
+}
+
+.blend-animations {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.animation-select {
+    padding: 5px;
+    border-radius: 4px;
+    background-color: #2c3e50;
+    color: white;
+    border: 1px solid #3498db;
+    width: 100%;
+}
+
+.mix-button {
+    background-color: #e67e22;
+}
+
+.mix-button:hover {
+    background-color: #d35400;
+}
+
+.animation-group {
+    margin-bottom: 10px;
+    padding: 8px;
+    border-radius: 4px;
+    background-color: rgba(44, 62, 80, 0.5);
+}
+
+.animation-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    margin: 10px 0;
+}
+
+.filter-tag {
+    background-color: #16a085;
+    color: white;
+    padding: 3px 8px;
+    border-radius: 12px;
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.filter-tag:hover {
+    background-color: #1abc9c;
+}
+
+.filter-tag.active {
+    background-color: #e74c3c;
 }

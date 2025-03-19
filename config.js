@@ -11,10 +11,12 @@ export const config = {
     
     // Animation settings
     crossFadeDuration: 0.5,
+    defaultPlaybackSpeed: 1.0,
+    maxPlaybackSpeed: 2.0,
+    minPlaybackSpeed: 0.1,
     
     // Model URL (using a free humanoid model from Three.js examples)
     modelURL: 'https://threejs.org/examples/models/gltf/Xbot.glb'
-    
     // Alternatively, you can try these models if the Xbot doesn't work:
     // modelURL: 'https://threejs.org/examples/models/gltf/Soldier.glb'
     // modelURL: 'https://models.babylonjs.com/mixamo/hip_hop_dancing.glb'

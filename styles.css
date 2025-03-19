@@ -64,6 +64,14 @@ button.active {
     background-color: #e74c3c;
 }
 
+button[data-duration="0"], 
+button[data-duration="0.1"], 
+button[data-duration="0.2"], 
+button[data-duration="0.3"], 
+button[data-duration="0.4"] {
+    border: 2px solid #f1c40f;  /* Highlight pose-type animations */
+}
+
 #info {
     font-size: 0.9rem;
 }
